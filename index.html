@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8fbf7">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Zählerstände, Stromkosten und Abrechnungszeiträume auf dem eigenen Gerät im Blick behalten.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Stromverbrauch">
+  <title>Stromverbrauch</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./modell.js"></script>
+  <script defer src="./speicher.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <a class="brand" href="./index.html" aria-label="Stromverbrauch Startseite">
+        <img src="./icons/icon-192.png" width="36" height="36" alt="">
+        <span>Stromverbrauch</span>
+      </a>
+      <button type="button" class="button button-quiet" id="reminder-button">Erinnerung</button>
+    </header>
+
+    <aside class="demo-strip" id="demo-strip" hidden>
+      <span>Beispieldaten</span>
+      <a href="./index.html">Eigene Daten</a>
+    </aside>
+    <p class="notice error" id="storage-notice" role="alert" hidden></p>
+    <p class="sr-only" id="status" role="status"></p>
+
+    <main>
+      <section class="welcome" id="welcome" hidden>
+        <h1>Dein Stromverbrauch</h1>
+        <p>Lege deinen ersten Abrechnungszeitraum an. Deine Vertragsdaten und Zählerstände bleiben auf diesem Gerät.</p>
+        <button type="button" class="button button-primary" id="setup-button">Ersten Zeitraum anlegen</button>
+        <a class="text-link" href="./index.html?beispiel=1">Beispiel ansehen</a>
+      </section>
+
+      <section class="periods" id="periods" aria-label="Abrechnungszeiträume" hidden>
+        <div class="section-row">
+          <h2>Abrechnungszeiträume</h2>
+          <button type="button" class="button button-quiet" id="new-period"><span aria-hidden="true">+</span> Neuer Zeitraum</button>
+        </div>
+        <div class="period-tabs" id="period-tabs" role="tablist" aria-label="Abrechnungszeitraum wählen"></div>
+      </section>
+
+      <div class="dashboard" id="dashboard" role="tabpanel" hidden>
+        <div class="period-heading section-row">
+          <div>
+            <h1 id="period-heading"></h1>
+            <p class="muted" id="period-phase" hidden></p>
+          </div>
+          <button type="button" class="button button-quiet" id="edit-period">Vertrag</button>
+        </div>
+
+        <section class="usage">
+          <div class="section-row">
+            <h2 id="usage-label">Verbrauch bisher</h2>
+            <p class="muted" id="last-reading"></p>
+          </div>
+          <p class="hero-value"><span id="usage">–</span><span class="hero-unit">kWh</span></p>
+          <p class="muted" id="measurement-note" hidden></p>
+        </section>
+
+        <section class="monthly">
+          <div class="section-row">
+            <h2>Monatsverbrauch</h2>
+            <span class="muted" id="chart-scale"></span>
+          </div>
+          <ol class="month-grid" id="month-grid" aria-label="Alle Monate des Abrechnungszeitraums"></ol>
+          <div class="month-detail" aria-live="polite">
+            <div class="section-row">
+              <span id="month-label"></span>
+              <strong id="month-value"></strong>
+            </div>
+            <p class="muted" id="month-note" hidden></p>
+          </div>
+        </section>
+
+        <section class="budget" aria-label="Verbrauchsziel">
+          <div class="section-row">
+            <span class="muted">Ziel <strong id="budget-amount"></strong></span>
+            <strong id="remaining">–</strong>
+          </div>
+          <div class="budget-track" id="budget-track" role="meter" aria-label="Anteil am Verbrauchsziel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+            <span id="budget-fill"></span>
+          </div>
+        </section>
+
+        <dl class="metrics">
+          <div><dt id="cost-label">Kosten bisher</dt><dd id="cost">–</dd></div>
+          <div><dt id="forecast-label">Prognose gesamt</dt><dd id="forecast">–</dd></div>
+        </dl>
+        <div class="balance" id="balance" hidden>
+          <div class="section-row">
+            <h2 id="balance-label"></h2>
+            <strong id="balance-amount"></strong>
+          </div>
+          <p class="muted" id="balance-details"></p>
+        </div>
+
+        <details class="reading-list" id="reading-list">
+          <summary>Zählerstände <span class="muted" id="reading-count"></span></summary>
+          <p class="muted" id="no-readings">Für diesen Zeitraum liegen noch keine Ablesungen vor.</p>
+          <ul id="reading-items"></ul>
+          <section id="other-readings" hidden>
+            <h2>Ablesungen außerhalb der Zeiträume</h2>
+            <ul id="other-items"></ul>
+          </section>
+        </details>
+      </div>
+    </main>
+
+    <footer class="entry-bar" id="entry-bar" hidden>
+      <button type="button" class="button button-primary" id="add-reading"><span aria-hidden="true">+</span> Zählerstand eintragen</button>
+    </footer>
+  </div>
+
+  <dialog class="sheet" id="period-dialog" aria-labelledby="period-dialog-title">
+    <form id="period-form" novalidate>
+      <header class="section-row">
+        <h2 id="period-dialog-title"></h2>
+        <button type="button" class="button button-close" data-close aria-label="Schließen">×</button>
+      </header>
+      <div class="form-fields">
+        <label class="span-two">Energielieferant <span class="muted">(optional)</span>
+          <input name="supplier" type="text" maxlength="120" placeholder="Name des Energielieferanten" autocomplete="off">
+        </label>
+        <label>Beginn<input name="start" type="date" required></label>
+        <label>Ende (letzter Tag)<input name="end" type="date" required></label>
+        <label class="span-two">
+          Startzählerstand in kWh <span class="muted">(optional)</span>
+          <input name="opening" type="text" inputmode="decimal" placeholder="z. B. 12.000" autocomplete="off">
+          <small>Der Stand zu Beginn des Zeitraums steht oft auf der letzten Abrechnung.</small>
+        </label>
+        <label>Arbeitspreis in ct/kWh<input name="workPrice" type="text" inputmode="decimal" placeholder="z. B. 32,50" autocomplete="off" required></label>
+        <label>Verbrauchsziel in kWh<input name="target" type="text" inputmode="decimal" placeholder="z. B. 3.000" autocomplete="off" required></label>
+        <label>Grundpreis pro Monat in €<input name="base" type="text" inputmode="decimal" placeholder="z. B. 10,00" autocomplete="off" required></label>
+        <label>Abschlag in €<input name="installment" type="text" inputmode="decimal" placeholder="z. B. 90,00" autocomplete="off" required></label>
+        <label>Anzahl der Abschläge<input name="installments" type="text" inputmode="numeric" autocomplete="off" required></label>
+      </div>
+      <p class="notice error" id="period-error" role="alert" hidden></p>
+      <button type="submit" class="button button-primary">Zeitraum speichern</button>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="reading-dialog" aria-labelledby="reading-dialog-title">
+    <form id="reading-form" novalidate>
+      <header class="section-row">
+        <h2 id="reading-dialog-title"></h2>
+        <button type="button" class="button button-close" data-close aria-label="Schließen">×</button>
+      </header>
+      <p class="muted" id="reading-hint" hidden></p>
+      <label>Ablesedatum<input name="date" type="date" required></label>
+      <label>Zählerstand in kWh<input name="value" type="text" inputmode="decimal" placeholder="z. B. 13.400" autocomplete="off" required></label>
+      <p class="notice error" id="reading-error" role="alert" hidden></p>
+      <button type="submit" class="button button-primary">Zählerstand speichern</button>
+      <button type="button" class="button button-danger" id="delete-reading" hidden>Eintrag löschen</button>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="reminder-dialog" aria-labelledby="reminder-title">
+    <div class="sheet-content">
+      <header class="section-row">
+        <h2 id="reminder-title">Monatliche Erinnerung</h2>
+        <button type="button" class="button button-close" data-close aria-label="Schließen">×</button>
+      </header>
+      <p>Erstelle in Apples App „Erinnerungen“ den Eintrag „Stromzähler ablesen“. Wähle als Termin den 1. des Monats, lege eine Uhrzeit fest und stelle „Wiederholen“ auf „Monatlich“.</p>
+      <p class="muted" id="share-hint" hidden>Über das Teilen-Menü kannst du deiner Erinnerung den Link zur Web-App hinzufügen.</p>
+      <button type="button" class="button button-primary" id="share-reminder" hidden>App-Link teilen</button>
+      <p class="notice error" id="share-error" role="alert" hidden></p>
+    </div>
+  </dialog>
+</body>
+</html>
